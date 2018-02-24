@@ -1,22 +1,11 @@
 package nu.gaffelmannen.apps.mandelbrot;
 
-/*************************************************************************
- *  Compilation:  javac Mandelbrot.java
- *  Execution:    java Mandelbrot xc yc size
- *  Dependencies: jawa.awt.Color
- *
- *  Plots the size-by-size region of the Mandelbrot set, centered on (xc, yc)
- *
- *  % java Mandelbrot -.5 0 2
- *
- *************************************************************************/
-
 import java.awt.Color;
 
 public class Mandelbrot {
-    // return number of iterations to check if c = a + ib is in Mandelbrot set
 
-	public static int mand(Complex z0, int max) {
+	public static int mand(Complex z0, int max) 
+	{
         Complex z = z0;
         for (int t = 0; t < max; t++) 
         {
@@ -26,24 +15,19 @@ public class Mandelbrot {
         return max;
     }
 	
-    public static void main(String[] args)  
+    public static void main(String[] args) 
     {
-    	double xc   = -0.5d;
+    		double xc   = -0.5d;
 	    double yc   = -1.0d;
 	    double size = 0.9d;
     	
-    	try
-    	{
+	    	try
+	    	{
 		    xc   = Double.parseDouble(args[0]);
 		    yc   = Double.parseDouble(args[1]);
 		    size = Double.parseDouble(args[2]);
-    	}
-    	catch(Exception e)
-    	{
-    		
-    	}
-    	finally
-    	{}
+	    	}
+	    	catch(Exception e) { }
     	
         int N   = 512;
         int maxNumberOfIterations = 255;
@@ -54,17 +38,18 @@ public class Mandelbrot {
         {
             for (int j = 0; j < N; j++) 
             {
-            	double x0 = xc - size/2 + size*i/N;
-                double y0 = yc - size/2 + size*j/N;
-                Complex z0 = new Complex(x0, y0);
-                
-                int iterations = mand(z0,maxNumberOfIterations);
-                
-                Color color = ((iterations==maxNumberOfIterations) ? Color.BLACK : new Color(175, (iterations*2) % 254, 0) );
-                
-                pic.set(i, N-1-j, color);
+				double x0 = xc - size/2 + size*i/N;
+				double y0 = yc - size/2 + size*j/N;
+				Complex z0 = new Complex(x0, y0);
+				
+				int iterations = mand(z0,maxNumberOfIterations);
+				
+				Color color = ((iterations==maxNumberOfIterations) ? Color.BLACK : new Color(175, (iterations*2) % 254, 0) );
+				
+				pic.set(i, N-1-j, color);
             }
         }
+        
         pic.show();
     }
 }
