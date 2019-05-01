@@ -1,6 +1,6 @@
 <project xmlns:ivy="antlib:org.apache.ivy.ant">
 
-    <property name="dir.src" value="Mandelbrot/src/nu/gaffelmannen/apps/mandelbrot" />
+    <property name="dir.src" value="nu/gaffelmannen/apps/mandelbrot" />
     <property name="dir.lib" value="lib" />
 	<property name="dir.build" value="build" />
 	<property name="dir.build.classes" value="build/classes" />
@@ -52,6 +52,14 @@
 
     <target name="run" depends="jar">
         <java jar="${dir.build.jar}/${file.output}" fork="true" />
+    </target>
+
+    <target name="run2" depends="jar">
+    	<java jar="${dir.build.jar}/${file.output}" fork="true" >
+		<arg value="-0.6d" />
+		<arg value="-1.0d" />
+		<arg value="0.9d" />
+	</java>
     </target>
 
 </project>

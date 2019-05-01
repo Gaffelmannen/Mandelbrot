@@ -37,6 +37,10 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.KeyStroke;
+import javax.swing.JScrollPane;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
+import java.awt.MouseInfo;
 
 
 /**
@@ -54,13 +58,31 @@ import javax.swing.KeyStroke;
  *  <i>Introduction to Programming in Java: An Interdisciplinary Approach</i>
  *  by Robert Sedgewick and Kevin Wayne.
  */
-public final class Picture implements ActionListener {
+public final class Picture implements ActionListener, MouseWheelListener {
+	static final String NEWLINE = System.getProperty("line.separator");
+	
+	private JScrollPane scrollPane;
     private BufferedImage image;               // the rasterized image
     private JFrame frame;                      // on-screen view
     private String filename;                   // name of file
     private boolean isOriginUpperLeft = true;  // location of origin
     private int width, height;                 // width and height
+    private boolean output = false;
+    private int unitsScrolled = 0;
+    private double relativeCursorPosX = 0;
+    private double relativeCursorPosY = 0;
 
+    public int getUnitsScrolled() {
+    	return unitsScrolled;
+    }
+    public double getRelativeCursorPosX() {
+    	return relativeCursorPosX;
+    }
+    public double getRelativeCursorPosY() {
+    	return relativeCursorPosY;
+    }
+    
+    
    /**
      * Create a blank w-by-h picture, where each pixel is black.
      */
@@ -146,7 +168,9 @@ public final class Picture implements ActionListener {
         // create the GUI for viewing the image if needed
         if (frame == null) {
             frame = new JFrame();
+            frame.addMouseWheelListener(this);
 
+            scrollPane = new JScrollPane();
             JMenuBar menuBar = new JMenuBar();
             JMenu menu = new JMenu("File");
             menuBar.add(menu);
@@ -256,7 +280,49 @@ public final class Picture implements ActionListener {
             save(chooser.getDirectory() + File.separator + chooser.getFile());
         }
     }
-
+    
+    void eventOutput(String eventDescription, MouseWheelEvent e) {
+    	System.out.println(eventDescription);
+    }
+    
+    public void mouseWheelMoved(MouseWheelEvent e) {
+    	synchronized (this) {
+    		unitsScrolled = e.getUnitsToScroll();
+    		relativeCursorPosX = (double)(MouseInfo.getPointerInfo().getLocation().x / (double)width());
+    		relativeCursorPosY = (double)(MouseInfo.getPointerInfo().getLocation().y / (double)height());
+    		
+    		notify();
+		}
+    	
+    	if(output) {
+	        String message;
+	        int notches = e.getWheelRotation();
+	        if (notches < 0) {
+	            message = "Mouse wheel moved UP "
+	                         + -notches + " notch(es)" + NEWLINE;
+	        } else {
+	            message = "Mouse wheel moved DOWN "
+	                         + notches + " notch(es)" + NEWLINE;
+	        }
+	        if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
+	            message += "    Scroll type: WHEEL_UNIT_SCROLL" + NEWLINE;
+	            message += "    Scroll amount: " + e.getScrollAmount()
+	                    + " unit increments per notch" + NEWLINE;
+	            message += "    Units to scroll: " + e.getUnitsToScroll()
+	                    + " unit increments" + NEWLINE;
+	            message += "    Vertical unit increment: "
+	                + scrollPane.getVerticalScrollBar().getUnitIncrement(1)
+	                + " pixels" + NEWLINE;
+	        } else { //scroll type == MouseWheelEvent.WHEEL_BLOCK_SCROLL
+	            message += "    Scroll type: WHEEL_BLOCK_SCROLL" + NEWLINE;
+	            message += "    Vertical block increment: "
+	                + scrollPane.getVerticalScrollBar().getBlockIncrement(1)
+	                + " pixels" + NEWLINE;
+	        }
+	        
+	        eventOutput(message, e);
+    	}
+    }
 
    /**
      * Test client. Reads a picture specified by the command-line argument,

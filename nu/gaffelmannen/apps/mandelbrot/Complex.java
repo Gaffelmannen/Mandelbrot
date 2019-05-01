@@ -1,5 +1,7 @@
 package nu.gaffelmannen.apps.mandelbrot;
 
+import java.lang.Math;
+
 public class Complex {
 	public double a;
 	public double b;
