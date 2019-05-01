@@ -5,9 +5,15 @@ import javax.swing.*;
 
 public class Mandelbrot {
 	
-	private double xc   = -0.5d;
-    private double yc   = -1.0d;
-    private double size = 0.9d;
+	public static final double DEFAULT_XC = -0.5d;
+	public static final double DEFAULT_YC = -1.0d;
+	public static final double DEFAULT_SIZE = 0.9d;
+	public static final int MAX_NUMBER_OF_ITERATIONS = 255;
+	public static final int N = 512;
+	
+	private double xc   = DEFAULT_XC;
+    private double yc   = DEFAULT_YC;
+    private double size = DEFAULT_SIZE;
 	
 	public int mand(Complex z0, int max) {
         Complex z = z0;
@@ -26,11 +32,7 @@ public class Mandelbrot {
 	}
 	
 	public void initMandelbrot() {
-		int N   = 512;
-        int maxNumberOfIterations = 255;
-
         Picture pic = new Picture(N, N);
-
 
         while(true) {
 
@@ -40,9 +42,9 @@ public class Mandelbrot {
 					double y0 = yc - size/2 + size*j/N;
 					Complex z0 = new Complex(x0, y0);
 					
-					int iterations = mand(z0,maxNumberOfIterations);
+					int iterations = mand(z0,MAX_NUMBER_OF_ITERATIONS);
 					
-					Color color = ((iterations==maxNumberOfIterations)
+					Color color = ((iterations==MAX_NUMBER_OF_ITERATIONS)
 						? Color.BLACK
 						: new Color(175, (iterations*2) % 254, 0) );
 					
@@ -60,19 +62,25 @@ public class Mandelbrot {
 	                e.printStackTrace();
 	            }
 	        }
-	        this.size += 0.01d * (double)pic.getUnitsScrolled();
-	        this.xc += 0.01d * pic.getRelativeCursorPosX();
-	        this.yc += 0.01d * pic.getRelativeCursorPosY();
-	        System.out.println("u=" + pic.getUnitsScrolled());
-	        System.out.println("x=" + pic.getRelativeCursorPosX());
-	        System.out.println("y=" + pic.getRelativeCursorPosY());
+	        
+	        if(pic.Reset()) {
+	        	this.size = DEFAULT_SIZE;
+	        	this.xc = DEFAULT_XC;
+	        	this.yc = DEFAULT_YC;
+	        	pic.clearResetFlag();
+	        } else {
+		        this.size += 0.01d * (double)pic.getUnitsScrolled();
+		        this.xc += 0.01d * pic.getRelativeCursorPosX();
+		        this.yc += 0.01d * pic.getRelativeCursorPosY();
+		        System.out.println("u=" + pic.getUnitsScrolled());
+		        System.out.println("x=" + pic.getRelativeCursorPosX());
+		        System.out.println("y=" + pic.getRelativeCursorPosY());
+	        }
         }
 	}
 	
     public static void main(String[] args) 
     {
-    	System.out.println("Hej!");
-    	
     	try {
     		Mandelbrot mandelbrot = new Mandelbrot();
 	    	

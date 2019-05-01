@@ -58,7 +58,7 @@ import java.awt.MouseInfo;
  *  <i>Introduction to Programming in Java: An Interdisciplinary Approach</i>
  *  by Robert Sedgewick and Kevin Wayne.
  */
-public final class Picture implements ActionListener, MouseWheelListener {
+public final class Picture implements MouseWheelListener {
 	static final String NEWLINE = System.getProperty("line.separator");
 	
 	private JScrollPane scrollPane;
@@ -71,6 +71,7 @@ public final class Picture implements ActionListener, MouseWheelListener {
     private int unitsScrolled = 0;
     private double relativeCursorPosX = 0;
     private double relativeCursorPosY = 0;
+    private boolean reset = false;
 
     public int getUnitsScrolled() {
     	return unitsScrolled;
@@ -81,6 +82,19 @@ public final class Picture implements ActionListener, MouseWheelListener {
     public double getRelativeCursorPosY() {
     	return relativeCursorPosY;
     }
+    public boolean Reset() {
+    	return reset;
+    }
+    public int height() {
+        return height;
+    }
+    public int width() {
+        return width;
+    }
+    public void clearResetFlag() {
+    	this.reset = false;
+    }
+    
     
     
    /**
@@ -171,20 +185,41 @@ public final class Picture implements ActionListener, MouseWheelListener {
             frame.addMouseWheelListener(this);
 
             scrollPane = new JScrollPane();
+            
             JMenuBar menuBar = new JMenuBar();
             JMenu menu = new JMenu("File");
             menuBar.add(menu);
-            JMenuItem menuItem1 = new JMenuItem(" Save...   ");
-            menuItem1.addActionListener(this);
-            menuItem1.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S,
-                                     Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
-            menu.add(menuItem1);
+            
+            JMenuItem menuItemSave = new JMenuItem(" Save...   ");
+            menuItemSave.addActionListener(new ActionListener() {
+            	public void actionPerformed(ActionEvent e) {
+            		FileDialog chooser = new FileDialog(frame, "Use a .png or .jpg extension", FileDialog.SAVE);
+            		chooser.setVisible(true);
+					if (chooser.getFile() != null) {
+						save(chooser.getDirectory() + File.separator + chooser.getFile());
+					}
+            	}
+            });
+            menuItemSave.setAccelerator(
+        		KeyStroke.getKeyStroke(KeyEvent.VK_S,
+                Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()));
+            menu.add(menuItemSave);
+            
+            JMenuItem menuItemReset = new JMenuItem("Reset");
+            menuItemReset.addActionListener(new ActionListener() {
+            	public void actionPerformed(ActionEvent e) {
+            		synchronized (this) {
+            			reset = true;
+            			System.out.println("Reset.");
+            			notify();
+            		}
+            	}
+            });
+            menu.add(menuItemReset);
+            
             frame.setJMenuBar(menuBar);
-
-
-
             frame.setContentPane(getJLabel());
-            // f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setTitle(filename);
             frame.setResizable(false);
@@ -194,20 +229,6 @@ public final class Picture implements ActionListener, MouseWheelListener {
 
         // draw
         frame.repaint();
-    }
-
-   /**
-     * Return the height of the picture in pixels.
-     */
-    public int height() {
-        return height;
-    }
-
-   /**
-     * Return the width of the picture in pixels.
-     */
-    public int width() {
-        return width;
     }
 
    /**
@@ -268,18 +289,6 @@ public final class Picture implements ActionListener, MouseWheelListener {
             System.out.println("Error: filename must end in .jpg or .png");
         }
     }
-
-   /**
-     * Opens a save dialog box when the user selects "Save As" from the menu.
-     */
-    public void actionPerformed(ActionEvent e) {
-        FileDialog chooser = new FileDialog(frame,
-                             "Use a .png or .jpg extension", FileDialog.SAVE);
-        chooser.setVisible(true);
-        if (chooser.getFile() != null) {
-            save(chooser.getDirectory() + File.separator + chooser.getFile());
-        }
-    }
     
     void eventOutput(String eventDescription, MouseWheelEvent e) {
     	System.out.println(eventDescription);
@@ -288,8 +297,17 @@ public final class Picture implements ActionListener, MouseWheelListener {
     public void mouseWheelMoved(MouseWheelEvent e) {
     	synchronized (this) {
     		unitsScrolled = e.getUnitsToScroll();
-    		relativeCursorPosX = (double)(MouseInfo.getPointerInfo().getLocation().x / (double)width());
+    		
+    		relativeCursorPosY = (double)(MouseInfo.getPointerInfo().getLocation().x / (double)width());
     		relativeCursorPosY = (double)(MouseInfo.getPointerInfo().getLocation().y / (double)height());
+    		
+    		if(relativeCursorPosX < 0.5) {
+    			relativeCursorPosX = -relativeCursorPosX;
+    		}
+    		
+    		if(relativeCursorPosY < 0.5) {
+    			relativeCursorPosY = -relativeCursorPosY;
+    		}
     		
     		notify();
 		}
