@@ -1,24 +1,5 @@
 package nu.gaffelmannen.apps.mandelbrot;
 
-/*************************************************************************
- *  Compilation:  javac Picture.java
- *  Execution:    java Picture imagename
- *
- *  Data type for manipulating individual pixels of an image. The original
- *  image can be read from a file in jpg, gif, or png format, or the
- *  user can create a blank image of a given size. Includes methods for
- *  displaying the image in a window on the screen or saving to a file.
- *
- *  % java Picture mandrill.jpg
- *
- *  Remarks
- *  -------
- *   - pixel (x, y) is column x and row y, where (0, 0) is upper left
- *
- *   - see also GrayPicture.java for a grayscale version
- *
- *************************************************************************/
-
 import java.awt.Color;
 import java.awt.FileDialog;
 import java.awt.Toolkit;
@@ -41,37 +22,31 @@ import javax.swing.JScrollPane;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.MouseInfo;
+import javax.swing.InputMap;
+import javax.swing.JComponent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.util.Observable;
 
-
-/**
- *  This class provides methods for manipulating individual pixels of
- *  an image. The original image can be read from a file in JPEG, GIF,
- *  or PNG format, or the user can create a blank image of a given size.
- *  This class includes methods for displaying the image in a window on
- *  the screen or saving to a file.
- *  <p>
- *  By default, pixel (x, y) is column x, row y, where (0, 0) is upper left.
- *  The method setOriginLowerLeft() change the origin to the lower left.
- *  <p>
- *  For additional documentation, see
- *  <a href="http://introcs.cs.princeton.edu/31datatype">Section 3.1</a> of
- *  <i>Introduction to Programming in Java: An Interdisciplinary Approach</i>
- *  by Robert Sedgewick and Kevin Wayne.
- */
-public final class Picture implements MouseWheelListener {
+public final class Picture extends Observable implements MouseWheelListener {
 	static final String NEWLINE = System.getProperty("line.separator");
 	
 	private JScrollPane scrollPane;
-    private BufferedImage image;               // the rasterized image
-    private JFrame frame;                      // on-screen view
-    private String filename;                   // name of file
-    private boolean isOriginUpperLeft = true;  // location of origin
-    private int width, height;                 // width and height
+    private BufferedImage image;
+    private JFrame frame;
+    private String filename;
+    private boolean isOriginUpperLeft = true;
+    private int width, height;
     private boolean output = false;
     private int unitsScrolled = 0;
     private double relativeCursorPosX = 0;
     private double relativeCursorPosY = 0;
     private boolean reset = false;
+    private boolean panUp = false;
+    private boolean panDown = false;
+    private boolean panRight = false;
+    private boolean panLeft = false;
+    private boolean zoom = false;
 
     public int getUnitsScrolled() {
     	return unitsScrolled;
@@ -94,12 +69,52 @@ public final class Picture implements MouseWheelListener {
     public void clearResetFlag() {
     	this.reset = false;
     }
+    public boolean getPanUpFlag() {
+    	return this.panUp;
+    }
+    public void clearPanUpFlag() {
+    	synchronized(this) {
+			panUp = false;
+			notify();
+		}
+    }
+    public boolean getPanDownFlag() {
+    	return this.panDown;
+    }
+    public void clearPanDownFlag() {
+    	synchronized(this) {
+			panDown = false;
+			notify();
+		}
+    }
+    public boolean getPanRightFlag() {
+    	return this.panRight;
+    }
+    public void clearPanRightFlag() {
+    	synchronized(this) {
+			panRight = false;
+			notify();
+		}
+    }
+    public boolean getPanLeftFlag() {
+    	return this.panLeft;
+    }
+    public void clearPanLeftFlag() {
+    	synchronized(this) {
+			panLeft = false;
+			notify();
+		}
+    }
+    public boolean getZoomFlag() {
+    	return this.zoom;
+    }
+    public void clearZoomFlag() {
+    	synchronized(this) {
+			zoom = false;
+			notify();
+		}
+    }
     
-    
-    
-   /**
-     * Create a blank w-by-h picture, where each pixel is black.
-     */
     public Picture(int w, int h) {
         width = w;
         height = h;
@@ -108,10 +123,6 @@ public final class Picture implements MouseWheelListener {
         filename = w + "-by-" + h;
     }
 
-   /**
-     * Create a picture by reading in a .png, .gif, or .jpg from
-     * the given filename or URL name.
-     */
     public Picture(String filename) {
         this.filename = filename;
         try {
@@ -120,8 +131,6 @@ public final class Picture implements MouseWheelListener {
             if (file.isFile()) {
                 image = ImageIO.read(file);
             }
-
-            // now try to read from file in same directory as this .class file
             else {
                 URL url = getClass().getResource(filename);
                 if (url == null) { url = new URL(filename); }
@@ -136,9 +145,6 @@ public final class Picture implements MouseWheelListener {
         }
     }
 
-   /**
-     * Create a picture by reading in a .png, .gif, or .jpg from a File.
-     */
     public Picture(File file) {
         try { image = ImageIO.read(file); }
         catch (IOException e) {
@@ -150,33 +156,20 @@ public final class Picture implements MouseWheelListener {
         }
     }
 
-   /**
-     * Return a JLabel containing this Picture, for embedding in a JPanel,
-     * JFrame or other GUI widget.
-     */
     public JLabel getJLabel() {
         if (image == null) { return null; }         // no image available
         ImageIcon icon = new ImageIcon(image);
         return new JLabel(icon);
     }
 
-   /**
-     * Set the origin to be the upper left pixel.
-     */
     public void setOriginUpperLeft() {
         isOriginUpperLeft = true;
     }
 
-   /**
-     * Set the origin to be the lower left pixel.
-     */
     public void setOriginLowerLeft() {
         isOriginUpperLeft = false;
     }
-
-   /**
-     * Display the picture in a window on the screen.
-     */
+    
     public void show() {
 
         // create the GUI for viewing the image if needed
@@ -217,6 +210,44 @@ public final class Picture implements MouseWheelListener {
             });
             menu.add(menuItemReset);
             
+            frame.addKeyListener(new KeyAdapter() {
+            	public void keyPressed(KeyEvent evt) {
+            		if (evt.getKeyCode() == KeyEvent.VK_UP) {
+            			synchronized(this) {
+                			panUp = true;
+                			setChanged();
+                			notifyObservers("up");
+                			notify();
+                		}
+            		}
+            		if (evt.getKeyCode() == KeyEvent.VK_DOWN) {
+            			synchronized(this) {
+                			panDown = true;
+                			setChanged();
+                			notifyObservers("down");
+                			notify();
+                		}
+            		}
+            		if (evt.getKeyCode() == KeyEvent.VK_RIGHT) {
+            			synchronized(this) {
+                			panRight = true;
+                			setChanged();
+                			notifyObservers("right");
+                			notify();
+                		}
+            		}
+            		if (evt.getKeyCode() == KeyEvent.VK_LEFT) {
+            			synchronized(this) {
+                			panLeft = true;
+                			setChanged();
+                			notifyObservers("left");
+                			notify();
+                		}
+            		}
+            	}
+            });
+            
+            
             frame.setJMenuBar(menuBar);
             frame.setContentPane(getJLabel());
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -231,26 +262,17 @@ public final class Picture implements MouseWheelListener {
         frame.repaint();
     }
 
-   /**
-     * Return the color of pixel (i, j).
-     */
     public Color get(int i, int j) {
         if (isOriginUpperLeft) return new Color(image.getRGB(i, j));
         else                   return new Color(image.getRGB(i, height - j - 1));
     }
 
-   /**
-     * Set the color of pixel (i, j) to c.
-     */
     public void set(int i, int j, Color c) {
         if (c == null) { throw new RuntimeException("can't set Color to null"); }
         if (isOriginUpperLeft) image.setRGB(i, j, c.getRGB());
         else                   image.setRGB(i, height - j - 1, c.getRGB());
     }
 
-   /**
-     * Is this Picture equal to obj?
-     */
     public boolean equals(Object obj) {
         if (obj == this) return true;
         if (obj == null) return false;
@@ -264,18 +286,10 @@ public final class Picture implements MouseWheelListener {
         return true;
     }
 
-
-   /**
-     * Save the picture to a file in a standard image format.
-     * The filetype must be .png or .jpg.
-     */
     public void save(String name) {
         save(new File(name));
     }
 
-   /**
-     * Save the picture to a file in a standard image format.
-     */
     public void save(File file) {
         this.filename = file.getName();
         if (frame != null) { frame.setTitle(filename); }
@@ -296,8 +310,9 @@ public final class Picture implements MouseWheelListener {
     
     public void mouseWheelMoved(MouseWheelEvent e) {
     	synchronized (this) {
-    		unitsScrolled = e.getUnitsToScroll();
-    		
+    		this.unitsScrolled = e.getUnitsToScroll();
+    		this.zoom = true;
+    		/*
     		relativeCursorPosY = (double)(MouseInfo.getPointerInfo().getLocation().x / (double)width());
     		relativeCursorPosY = (double)(MouseInfo.getPointerInfo().getLocation().y / (double)height());
     		
@@ -308,7 +323,9 @@ public final class Picture implements MouseWheelListener {
     		if(relativeCursorPosY < 0.5) {
     			relativeCursorPosY = -relativeCursorPosY;
     		}
-    		
+    		*/
+    		setChanged();
+			notifyObservers("zoom");
     		notify();
 		}
     	
@@ -341,11 +358,11 @@ public final class Picture implements MouseWheelListener {
 	        eventOutput(message, e);
     	}
     }
+    
+    void repaint() {
+        frame.repaint();
+    }
 
-   /**
-     * Test client. Reads a picture specified by the command-line argument,
-     * and shows it in a window on the screen.
-     */
     public static void main(String[] args) {
         Picture pic = new Picture(args[0]);
         System.out.printf("%d-by-%d\n", pic.width(), pic.height());
